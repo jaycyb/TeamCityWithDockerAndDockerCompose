@@ -1,0 +1,9 @@
+version: "2"
+
+services:
+  agent:
+    build:    
+      context: .
+      dockerfile: dockerfile.agent
+    volumes:
+      - ./m2:/root/.m2

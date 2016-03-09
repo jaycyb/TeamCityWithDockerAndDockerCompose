@@ -15,32 +15,36 @@ if [ ! -f $TEAMCITY_DATA_PATH/lib/jdbc/mysql-connector-java-5.1.38-bin.jar ]; th
     mv $TEAMCITY_DATA_PATH/lib/jdbc/mysql-connector-java-5.1.38/mysql-connector-java-5.1.38-bin.jar $TEAMCITY_DATA_PATH/lib/jdbc/mysql-connector-java-5.1.38-bin.jar
 fi
 
-if [ ! -f $TEAMCITY_DATA_PATH/plugins/agentAutoAuthorize.jar ]; then
-    mkdir -p $TEAMCITY_DATA_PATH/plugins
-
-    # Plugin needed for self authentication of the agents
-    wget https://github.com/matt-richardson/TeamCityAgentAutoRegisterPlugin/releases/download/v0.1.0/agentAutoAuthorize.zip
-    mv agentAutoAuthorize.zip $TEAMCITY_DATA_PATH/plugins/agentAutoAuthorize.zip
-fi
-
 if [ ! -f $TEAMCITY_DATA_PATH/config/internal.properties ]; then
     mkdir -p $TEAMCITY_DATA_PATH/config
     
+    cat <<EOF >>$TEAMCITY_DATA_PATH/config/internal.properties
     # Token every agent has to know who wants to self-authenticate
-    echo "teamcity.agentAutoAuthorize.authorizationToken=70d44d1e5007dd6b" >> $TEAMCITY_DATA_PATH/config/internal.properties
+    teamcity.agentAutoAuthorize.authorizationToken=70d44d1e5007dd6b
 
     # Make sure no "First step" stuff is shown to the user 
     # -> we do configure the database server in this script
-    echo "teamcity.startup.maintenance=false" >> $TEAMCITY_DATA_PATH/config/internal.properties
+    teamcity.startup.maintenance=false
+EOF
 
     # Database server configuration
-    echo "connectionProperties.user="$DB_USER >> $TEAMCITY_DATA_PATH/config/database.properties
-    echo "connectionProperties.password="$DB_PASS >> $TEAMCITY_DATA_PATH/config/database.properties
-    echo "connectionUrl=jdbc\:mysql\://mysql\:3306/"$DB_NAME >> $TEAMCITY_DATA_PATH/config/database.properties
+    cat <<EOF >>$TEAMCITY_DATA_PATH/config/database.properties
+connectionProperties.user=$DB_USER
+connectionProperties.password=$DB_PASS
+connectionUrl=jdbc:mysql://mysql:3306/$DB_NAME
+EOF
+
 fi
 
 # Make sure the teamcity-server.sh file is executable
 chmod +x $BASH_FILE
+cd /home/teamcity-restore
+if [ ! -f ./server_is_restored ]; then
+    echo "restoring teamcity"
+    [ -f restore.sh ] && ./restore.sh
+    touch ./server_is_restored
+fi
+cd -
 
 # Run the TeamCity server
 sh $BASH_FILE run

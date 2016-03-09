@@ -1,0 +1,32 @@
+FROM phusion/baseimage:0.9.18
+
+MAINTAINER Paixon GmbH
+MAINTAINER jaycyb <dev.cyborg@gmail.com>
+
+# Environment Variables
+ENV TEAMCITY_PACKAGE TeamCity-9.1.6.tar.gz 
+ENV TEAMCITY_DOWNLOAD http://download.jetbrains.com/teamcity 
+ENV TEAMCITY_DATA_PATH /etc/teamcity/data/
+
+ADD plugins/agentAutoAuthorize.zip $TEAMCITY_DATA_PATH/plugins/agentAutoAuthorize.zip
+ADD runserver.sh /runserver.sh
+
+RUN chmod +x /runserver.sh \
+ && echo "oracle-java7-installer  shared/accepted-oracle-license-v1-1 boolean true" | /usr/bin/debconf-set-selections \
+ && add-apt-repository ppa:webupd8team/java \
+ && apt-get update \
+ && DEBIAN_FRONTEND="noninteractive" apt-get install -q -y oracle-java8-installer oracle-java8-set-default unzip wget \
+ && apt-get remove openjdk-7-jre \
+ && apt-get update \
+ && wget $TEAMCITY_DOWNLOAD/$TEAMCITY_PACKAGE \
+ && tar zxf $TEAMCITY_PACKAGE -C /opt \
+ && rm -rf $TEAMCITY_PACKAGE \
+ && useradd -ms /bin/bash teamcity
+
+ADD ssh /root/.ssh
+RUN cp -pra /root/.ssh /home/teamcity/.ssh \
+ && chown -R teamcity:teamcity /home/teamcity/.ssh
+
+EXPOSE 8111 
+
+CMD ["/runserver.sh"]

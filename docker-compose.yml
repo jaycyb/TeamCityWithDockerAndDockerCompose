@@ -1,43 +1,58 @@
-mysql:
-  image: "sameersbn/mysql:latest"
-  volumes: 
-    - "/home/yourUser/pathToStoreOnHostSystem/TeamCityDatabase:/var/lib/mysql"
-  environment:
-    - "DB_USER=MyUser"
-    - "DB_PASS=MyPass"
-    - "DB_NAME=teamcity"
-  ports:
-    - "3306:3306"
+version: "2"
 
-server: 
-  build: .
-  dockerfile: ServerDockerFile
-  ports:
-    - "8111:8111"
-  environment:
-    - "DB_USER=MyUser"
-    - "DB_PASS=MyPass"
-    - "DB_NAME=teamcity"
-  volumes:
-    - "/home/yourUser/pathToStoreOnHostSystem/TeamCity:/etc/teamcity/data/"
-  links:
-    - mysql
-
-agent1:
-  build: .
-  dockerfile: AgentDockerFile
-  links:
-    - server
-
-agent2:
-  build: .
-  dockerfile: AgentDockerFile
-  links:
-    - server
-
-agent3:
-  build: .
-  dockerfile: AgentDockerFile
-  links:
-    - server
-
+services:
+  mysql:
+    image: "sameersbn/mysql:latest"
+    volumes: 
+      - "mysql-data:/var/lib/mysql"
+      - "./mysql/my.cnf:/etc/mysql/conf.d/teamcity.cnf"
+    environment:
+      - "DB_USER=teamcityuser"
+      - "DB_PASS=jaycyb_TeamCityWithDockerAndDockerCompose"
+      - "DB_NAME=teamcity"
+    ports:
+      - "3306:3306"
+  
+  server: 
+    build:
+      context: .
+      dockerfile: dockerfile.server
+    ports:
+      - "8111:8111"
+    environment:
+      - "DB_USER=teamcityuser"
+      - "DB_PASS=jaycyb_TeamCityWithDockerAndDockerCompose"
+      - "DB_NAME=teamcity"
+      - "SSH_AUTH_SOCK=/ssh-agent"
+    volumes:
+      - ./teamcity-data:/etc/teamcity/data
+      - ./teamcity-restore:/home/teamcity-restore
+      - ./m2:/root/.m2
+      - ./gitconfig:/root/.gitconfig
+      - "${SSH_AUTH_SOCK}:/ssh-agent"
+    links:
+      - mysql
+  
+  agent1:
+    extends:
+      file: common.yml
+      service: agent
+    links:
+      - server
+  
+  agent2:
+    extends:
+      file: common.yml
+      service: agent
+    links:
+      - server
+  
+  agent2:
+    extends:
+      file: common.yml
+      service: agent
+    links:
+      - server
+  
+volumes:
+  mysql-data:
